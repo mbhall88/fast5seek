@@ -2,7 +2,7 @@
 Yes, another Nanopore script. Because the world doesn't have enough of them.
 
     git clone https://github.com/mbhall88/fast5_in_ref.git
-    cd fast5_in_ref
+    cd fast5_in_ref && chmod +x fast5_in_ref
 
 This script can be used to generate a list of file paths for `fast5` files that are contained within a `fastq`, `BAM`, or `SAM` file of interest.
 
