@@ -12,6 +12,8 @@ It's pretty straight-forward to use:
 
 The script will walk down into subdirectories as well, so you can just give it your directory containing all your files.
 
+What it does is read in `<in.fastq>` and extract the read id from each header. It then goes through all the fast5 files under `<fast_dir>` and checks whether their read id is in the set of read ids from `<in.fastq>`. If it is, the path to the file is written to it's own line in `<out.txt>`.
+
 If no output (`-o`) is given, it will write the output to `stdout`. 
 
 So if you wanted to pipe these paths into another program, you could do something like
