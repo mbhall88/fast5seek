@@ -7,18 +7,18 @@ import sys
 import h5py
 
 
-def get_fast5_dirs(fast5_dir, fastq, out_file):
-    """Returns the paths to all fast5 files contained in the fastq file.
+def get_fast5_dirs(fast5_dir, reference, out_file):
+    """Returns the paths to all fast5 files contained in the fastq BAM/SAM file.
 
     Args:
-            fast5_dir (str): The path to the directory where the fast5 files are.
-            fastq (str): Path to the fastq file.
-            out_file (File): File to write the fast5 paths contained
-            in the fastq file to. 
+        fast5_dir (str): The path to the directory where the fast5 files are.
+        reference (str): Path to the fastq or BAM/SAM file.
+        out_file (File): File to write the fast5 paths contained
+        in the fastq file to.
 
     """
-    # get a set of the read ids in the fastq file
-    read_ids = extract_read_ids(fastq)
+    # get a set of the read ids in the fastq or BAM/SAM file
+    read_ids = extract_read_ids(reference)
 
     # get the absolute path for the fast5 directory
     abs_path = os.path.abspath(os.path.realpath(fast5_dir))
@@ -56,10 +56,10 @@ def get_read_id(filepath):
     If the file cannot be opened, it will be skipped.
 
     Args:
-            filepath (str): Path to the fast5 file.
+        filepath (str): Path to the fast5 file.
 
     Returns:
-            read_id (str): The read_id
+        read_id (str): The read_id
 
     """
     group = 'Raw/Reads/'
@@ -83,27 +83,55 @@ def get_read_id(filepath):
         raise err
 
 
-def extract_read_ids(fastq_path):
+def extract_read_ids(ref_path):
     """Extracts the all the read ids from the fastq file.
     The read_id is the first part of the header and starts with an @
 
     Args:
-            fastq_path (str): Path to the fastq file to extract read_ids from.
+        ref_path (str): Path to the fastq or BAM/SAM file to extract
+        read_ids from.
 
     Returns:
-            read_ids (set[str]): A set of all the read ids in the fastq file.
+        read_ids (set[str]): A set of all the read ids in the fastq file.
 
     """
-    # get the absolute path
-    fastq = os.path.abspath(os.path.realpath(fastq_path))
+    # get the absolute path and the file extension
+    ref_path = os.path.abspath(os.path.realpath(ref_path))
+    extension = os.path.splitext(ref_path)[1][1:]
 
+    if extension in {'bam', 'sam'}:
+        read_ids = get_read_id_sam(ref_path)
+    elif extension in {'fq', 'fastq'}:
+        read_ids = get_read_id_fastq(ref_path)
+    else:
+        raise Exception('{} is not a supported file format. Supported file '
+                        'types are: .fastq, .sam, and .bam'.format(extension))
+
+    return read_ids
+
+
+def get_read_id_fastq(ref_path):
+    """Extracts the read ids from a fastq file."""
     read_ids = set()
-    with open(fastq_path, 'r') as fastq:
-        for line in fastq:
+    with open(ref_path, 'r') as ref:
+        for line in ref:
             if line.startswith('@'):  # i.e if line is header
-            	# split the line on spaces, take the first element, remove @
+                # split the line on spaces, take the first element, remove @
                 read_id = line.split(' ')[0].replace('@', '')
                 read_ids.add(read_id)
+
+    return read_ids
+
+
+def get_read_id_sam(ref_path):
+    """Extract the read ids from a BAM or SAM file."""
+    import pysam
+
+    read_ids = set()
+    with pysam.AlignmentFile(ref_path, 'r', ignore_truncation=True) as ref:
+        for read in ref:
+            # query_name is the query template name
+            read_ids.add(read.query_name)
 
     return read_ids
 
@@ -111,7 +139,7 @@ def extract_read_ids(fastq_path):
 def main():
     parser = argparse.ArgumentParser(
             description = "Outputs paths of all the fast5 files from a \
-            given directory that are contained within a fastq file.",
+            given directory that are contained within a fastq or BAM/SAM file.",
             prog='fast5_in_fastq',
             )
 
@@ -122,13 +150,13 @@ def main():
             type=str, required=True)
 
     parser.add_argument(
-            "-f", "--fastq",
-            help = "Fastq file.",
+            "-r", "--reference",
+            help="Fastq or BAM/SAM file.",
             required=True)
 
     parser.add_argument(
             "-o", "--output",
-            help = "Filename to write fast5 paths to. If nothing is entered, \
+            help="Filename to write fast5 paths to. If nothing is entered, \
             it will write the paths to STDOUT.", 
             default=None)
 
@@ -137,7 +165,7 @@ def main():
     # if no output is given, write to stdout
     out_file = args.output or sys.stdout
 
-    get_fast5_dirs(args.fast5_dir, args.fastq, out_file)
+    get_fast5_dirs(args.fast5_dir, args.reference, out_file)
 
 
 if __name__ == '__main__':
