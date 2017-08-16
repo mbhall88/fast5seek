@@ -16,8 +16,10 @@ If no output (`-o`) is given, it will write the output to `stdout`.
 
 So if you wanted to pipe these paths into another program, you could do something like
 
-    ./fast5_in_fastq -i </path/to/fast5s/> -f <in.fastq> | xargs cp -t <subset_dir>
+    mkdir subset_dir/
+    ./fast5_in_fastq -i </path/to/fast5s/> -f <in.fastq> | xargs cp -t subset_dir/
 
-The above example would copy the fast5 files that are found in your fastq to another directory `subset_dir`.
+
+The above example would copy the fast5 files that are found in your fastq to `subset_dir/`.
 
 If there are any issues (with the program) let me know. 
