@@ -140,7 +140,7 @@ def main():
     parser = argparse.ArgumentParser(
             description = "Outputs paths of all the fast5 files from a \
             given directory that are contained within a fastq or BAM/SAM file.",
-            prog='fast5_in_fastq',
+            prog='fast5_in_ref',
             )
 
     parser.add_argument(
