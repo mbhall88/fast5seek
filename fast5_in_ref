@@ -38,6 +38,17 @@ def get_fast5_dirs(fast5_dir, reference, out_file):
                 # if the file is in the fastq file and it has not 
                 # already been found...
                 if read_id in read_ids and filepath not in filepaths:
+
+                    # if fastq, make sure read and fastq are from the same
+                    # experiment. Small chance read ids could be the same from
+                    # diff. experiments. If not, skip file.
+                    extension = os.path.splitext(reference)[1][1:]
+                    if extension in {'fastq', 'fq'}:
+                        fastq_run_id = get_fastq_run_id(reference)
+                        fast5_run_id = get_fast5_run_id(filepath)
+                        if fastq_run_id and fastq_run_id != fast5_run_id:
+                            continue
+
                     filepaths.add(filepath)
                     out_file.write(filepath + '\n')
 
@@ -121,6 +132,23 @@ def get_read_id_fastq(ref_path):
                 read_ids.add(read_id)
 
     return read_ids
+
+
+def get_fastq_run_id(ref_path):
+    """Extracts the read ids from a fastq file."""
+    read_ids = set()
+    with open(ref_path, 'r') as ref:
+        for line in ref:
+            if line.startswith('@'):  # i.e if line is header
+                line_as_list = line.split(' ')
+                for field in line_as_list:
+                    if field.startswith('runid='):
+                        return field.strip().replace('runid=', '')
+
+
+def get_fast5_run_id(filepath):
+    with h5py.File(filepath) as fast5:
+        return fast5['UniqueGlobalKey/tracking_id/'].attrs['run_id']
 
 
 def get_read_id_sam(ref_path):
