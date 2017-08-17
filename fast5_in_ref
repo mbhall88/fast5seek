@@ -20,6 +20,10 @@ def get_fast5_dirs(fast5_dir, reference, out_file):
     # get a set of the read ids in the fastq or BAM/SAM file
     read_ids = extract_read_ids(reference)
 
+    extension = os.path.splitext(reference)[1][1:]
+    if extension in {'fastq', 'fq'}:
+        fastq_run_id = get_fastq_run_id(reference)
+
     # get the absolute path for the fast5 directory
     abs_path = os.path.abspath(os.path.realpath(fast5_dir))
 
@@ -31,22 +35,19 @@ def get_fast5_dirs(fast5_dir, reference, out_file):
                 filepath = os.path.join(root, file_)
                 
                 try:
-                    read_id = get_read_id(filepath)
+                    fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
                 except IOError:  # file cannot be opened
                     continue
 
                 # if the file is in the fastq file and it has not 
                 # already been found...
-                if read_id in read_ids and filepath not in filepaths:
+                if fast5_read_id in read_ids and filepath not in filepaths:
 
                     # if fastq, make sure read and fastq are from the same
                     # experiment. Small chance read ids could be the same from
                     # diff. experiments. If not, skip file.
-                    extension = os.path.splitext(reference)[1][1:]
-                    if extension in {'fastq', 'fq'}:
-                        fastq_run_id = get_fastq_run_id(reference)
-                        fast5_run_id = get_fast5_run_id(filepath)
-                        if fastq_run_id and fastq_run_id != fast5_run_id:
+                    if extension in {'fastq', 'fq'} and fastq_run_id:
+                        if fastq_run_id != fast5_run_id:
                             continue
 
                     filepaths.add(filepath)
@@ -62,15 +63,15 @@ def get_read_group(list_of_names):
             return name
 
 
-def get_read_id(filepath):
-    """Extracts the read_id from a given fast5 file.
+def get_read_and_run_id(filepath):
+    """Extracts the read_id and run_id from a given fast5 file.
     If the file cannot be opened, it will be skipped.
 
     Args:
         filepath (str): Path to the fast5 file.
 
     Returns:
-        read_id (str): The read_id
+        (tuple[str, str]): The read_id and run_id
 
     """
     group = 'Raw/Reads/'
@@ -86,7 +87,9 @@ def get_read_id(filepath):
             read_group = get_read_group(list_of_names)
             group += read_group
 
-            return fast5[group].attrs['read_id']  # the read_id
+            run_id = fast5['UniqueGlobalKey/tracking_id/'].attrs['run_id']
+
+            return fast5[group].attrs['read_id'], run_id  # the read_id
 
     except IOError as err:  # skip file if it cannot be opened
         sys.stderr.write('{} could not be opened. \
@@ -144,11 +147,6 @@ def get_fastq_run_id(ref_path):
                 for field in line_as_list:
                     if field.startswith('runid='):
                         return field.strip().replace('runid=', '')
-
-
-def get_fast5_run_id(filepath):
-    with h5py.File(filepath) as fast5:
-        return fast5['UniqueGlobalKey/tracking_id/'].attrs['run_id']
 
 
 def get_read_id_sam(ref_path):
