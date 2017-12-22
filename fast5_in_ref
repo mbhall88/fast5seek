@@ -1,60 +1,79 @@
 #!/usr/bin/env python
+from __future__ import print_function
+
+"""
+Outputs paths of all the fast5 files from a
+given directory that are contained within a fastq or BAM/SAM file.
+
+Usage:
+
+It's pretty straight-forward to use:
+
+    ./fast5_in_ref -i <fast5_dir> -r <in.fastq|in.bam|in.sam> -o <out.txt>
+
+The script will walk down into subdirectories as well, so you can just give it your directory containing all your files.
+
+What it does is read in `<in.fastq|in.bam|in.sam>` and extract the read id from each header. It then goes through all the fast5 files under `<fast_dir>` and checks whether their read id is in the set of read ids from `<in.fastq|in.bam|in.sam>`. If it is, the path to the file is written to it's own line in `<out.txt>`.
+"""
+
+
+#DTS @conchoecia change notes:
+#
+#- In extract_read_ids(), removed the os.path.abspath() command since FullPaths
+#  action takes care of this.
+#- made a _get_file_extension(args.reference) since that code is recycled a few times
+#- removed abs_path = os.path.abspath(os.path.realpath(args.fast5_dir)) since FUllPaths
+#  figures this out
+#- Cleaned up the way that read ids are parsed from the fast5 files and dealt with
+#  inconsistencies in file naming.
+#- Made timestamps and useful progress feedback for the user print to stderr.
+#- Made the program work with both py2 and py3
+
 
 import argparse
 import os
 import re
 import sys
 import h5py
+import time
+import progressbar
 
+class FullPaths(argparse.Action):
+    """Expand user- and relative-paths"""
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest,
+                os.path.abspath(os.path.expanduser(values)))
 
-def get_fast5_dirs(fast5_dir, reference, out_file):
-    """Returns the paths to all fast5 files contained in the fastq BAM/SAM file.
+def parse_arguments():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-i", "--fast5_dir",
+        action=FullPaths,
+        help="""Directory of fast5 files you want to query. Program will
+        walk recursively through subdirectories.""",
+        type=str,
+        required=True)
 
-    Args:
-        fast5_dir (str): The path to the directory where the fast5 files are.
-        reference (str): Path to the fastq or BAM/SAM file.
-        out_file (File): File to write the fast5 paths contained
-        in the fastq file to.
+    parser.add_argument(
+        "-r", "--reference",
+        action=FullPaths,
+        help="""Fastq or BAM/SAM file.""",
+        required=True)
 
+    parser.add_argument(
+        "-o", "--output",
+        action=FullPaths,
+        help="""Filename to write fast5 paths to. If nothing is entered,
+        it will write the paths to STDOUT.""",
+        default=None)
+
+    return parser.parse_args()
+
+def timestamp():
     """
-    # get a set of the read ids in the fastq or BAM/SAM file
-    read_ids = extract_read_ids(reference)
-
-    extension = os.path.splitext(reference)[1][1:]
-    if extension in {'fastq', 'fq'}:
-        fastq_run_id = get_fastq_run_id(reference)
-
-    # get the absolute path for the fast5 directory
-    abs_path = os.path.abspath(os.path.realpath(fast5_dir))
-
-    filepaths = set()
-    for root, dirs, files in os.walk(abs_path):  # recursively walk fast5_dir
-        for file_ in files:
-
-            if file_.endswith(".fast5"):
-                filepath = os.path.join(root, file_)
-                
-                try:
-                    fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
-                except IOError:  # file cannot be opened
-                    continue
-
-                # if the file is in the fastq file and it has not 
-                # already been found...
-                if fast5_read_id in read_ids and filepath not in filepaths:
-
-                    # if fastq, make sure read and fastq are from the same
-                    # experiment. Small chance read ids could be the same from
-                    # diff. experiments. If not, skip file.
-                    if extension in {'fastq', 'fq'} and fastq_run_id:
-                        if fastq_run_id != fast5_run_id:
-                            continue
-
-                    filepaths.add(filepath)
-                    out_file.write(filepath + '\n')
-
-    sys.stderr.write('{} files found.\n'.format(len(filepaths)))
-
+    Returns the current time in :samp:`YYYY-MM-DD HH:MM:SS` format.
+    """
+    return time.strftime("%Y%m%d_%H%M%S")
 
 def get_read_group(list_of_names):
     """Extracts the correct group name for the group containing the read_id"""
@@ -89,13 +108,16 @@ def get_read_and_run_id(filepath):
 
             run_id = fast5['UniqueGlobalKey/tracking_id/'].attrs['run_id']
 
-            return fast5[group].attrs['read_id'], run_id  # the read_id
+            return fast5[group].attrs['read_id'].decode(), run_id.decode()  # the read_id
 
     except IOError as err:  # skip file if it cannot be opened
         sys.stderr.write('{} could not be opened. \
             Skipping...\n'.format(filepath))
         raise err
 
+def _get_file_extension(filepath):
+    """returns the file extension of filepath arg"""
+    return os.path.splitext(filepath)[1][1:]
 
 def extract_read_ids(ref_path):
     """Extracts the all the read ids from the fastq file.
@@ -109,22 +131,21 @@ def extract_read_ids(ref_path):
         read_ids (set[str]): A set of all the read ids in the fastq file.
 
     """
-    # get the absolute path and the file extension
-    ref_path = os.path.abspath(os.path.realpath(ref_path))
-    extension = os.path.splitext(ref_path)[1][1:]
+    # get the file extension
+
+    extension = _get_file_extension(ref_path)
 
     if extension in {'bam', 'sam'}:
-        read_ids = get_read_id_sam(ref_path)
+        read_ids = get_sam_read_ids(ref_path)
     elif extension in {'fq', 'fastq'}:
-        read_ids = get_read_id_fastq(ref_path)
+        read_ids = get_fastq_read_ids(ref_path)
     else:
         raise Exception('{} is not a supported file format. Supported file '
                         'types are: .fastq, .sam, and .bam'.format(extension))
 
     return read_ids
 
-
-def get_read_id_fastq(ref_path):
+def get_fastq_read_ids(ref_path):
     """Extracts the read ids from a fastq file."""
     read_ids = set()
     with open(ref_path, 'r') as ref:
@@ -135,7 +156,6 @@ def get_read_id_fastq(ref_path):
                 read_ids.add(read_id)
 
     return read_ids
-
 
 def get_fastq_run_id(ref_path):
     """Extracts the read ids from a fastq file."""
@@ -148,8 +168,27 @@ def get_fastq_run_id(ref_path):
                     if field.startswith('runid='):
                         return field.strip().replace('runid=', '')
 
+def _clean_sambam_id(inputname):
+    """Sometimes there are additional characters in the fast5 names added
+    on by albacore or MinKnow. They have variable length, so this
+    attempts to clean the name to match what is stored by the fast5 files.
 
-def get_read_id_sam(ref_path):
+    There are 5 fields. The first has a variable length.
+    [7x or 8x az09]-[4x az09]-[4x az09]-[4x az09]-[12x az09]
+
+    0688dd3-160d-4e2c-8af8-71c66c8db127
+    7e33249c-144c-44e2-af45-ed977f6972d8
+    67cbf79c-e341-4d5d-97b7-f3d6c91d9a85
+    """
+    #just grab the first five things when splitting with dashes
+    splitname = inputname.split("-")[0:5]
+    #The last one might have extra characters, unknown. We're relying
+    # on the 5th field to consistently have 12 characters to extract
+    # the correct id
+    splitname[4] = splitname[4][0:12]
+    return "-".join(splitname)
+
+def get_sam_read_ids(ref_path):
     """Extract the read ids from a BAM or SAM file."""
     import pysam
 
@@ -157,42 +196,81 @@ def get_read_id_sam(ref_path):
     with pysam.AlignmentFile(ref_path, 'r', ignore_truncation=True) as ref:
         for read in ref:
             # query_name is the query template name
-            read_ids.add(read.query_name)
+            # - sometimes there are additional characters after the id names
+            #    so we should use python string processing to split them up
+            cleanname = _clean_sambam_id(read.query_name)
+            read_ids.add(cleanname)
 
     return read_ids
 
 
 def main():
-    parser = argparse.ArgumentParser(
-            description = "Outputs paths of all the fast5 files from a \
-            given directory that are contained within a fastq or BAM/SAM file.",
-            prog='fast5_in_ref',
-            )
+    """The main method for the program. Runs each command independently.
+    Steps:
+    1) Collect the arguments.
+    2) Determine the outfile
+    3) Get a list of read ids.
+    """
+    # Step 1, collect the arguments
+    args = parse_arguments()
 
-    parser.add_argument(
-            "-i", "--fast5_dir",
-            help="Directory of fast5 files you want to query. Program will \
-            walk recursively through subdirectories.",
-            type=str, required=True)
-
-    parser.add_argument(
-            "-r", "--reference",
-            help="Fastq or BAM/SAM file.",
-            required=True)
-
-    parser.add_argument(
-            "-o", "--output",
-            help="Filename to write fast5 paths to. If nothing is entered, \
-            it will write the paths to STDOUT.", 
-            default=None)
-
-    args = parser.parse_args()
-
+    # Step 2, determine the outfile
     # if no output is given, write to stdout
     out_file = args.output or sys.stdout
 
-    get_fast5_dirs(args.fast5_dir, args.reference, out_file)
+    # Step 3, get a set of the read ids in the fastq or BAM/SAM file
+    print("{0} - Looking for reads to extract in {1}.".format(
+        timestamp(), os.path.split(args.reference)[1]), file=sys.stderr)
+
+    read_ids = extract_read_ids(args.reference)
+    #print(list(read_ids)[0:10])
+    print("{0} - We found {1} unique read ids".format(timestamp(), len(read_ids)),
+          file=sys.stderr)
+
+    extension = _get_file_extension(args.reference)
+    if extension in {'fastq', 'fq'}:
+        fastq_run_id = get_fastq_run_id(args.reference)
+
+    filepaths = set()
+    bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+    print("{0} - Now looking through {1} for matches.".format(
+        timestamp(), os.path.split(args.fast5_dir)[1]), file=sys.stderr)
+    i = 0
+    j = 0
+    for root, dirs, files in os.walk(args.fast5_dir):  # recursively walk fast5_dir
+        for this_file in files:
+            i += 1
+            if this_file.endswith(".fast5"):
+                bar.update(i)
+                filepath = os.path.join(root, this_file)
+                try:
+                    fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
+                except IOError:  # file cannot be opened
+                    continue
+
+                # if the file is in the fastq file and it has not
+                # already been found...
+                if fast5_read_id in read_ids and filepath not in filepaths:
+                    #print("found a match, {}".format(fast5_read_id))
+                    # if fastq, make sure read and fastq are from the same
+                    # experiment. Small chance read ids could be the same from
+                    # diff. experiments. If not, skip file.
+                    if extension in {'fastq', 'fq'} and fastq_run_id:
+                        if fastq_run_id != fast5_run_id:
+                            continue
+
+                    filepaths.add(filepath)
+                    j += 1
+                    print(filepath, file=out_file)
+
+    print("\n{0} - {1} files found.".format(
+        timestamp(), len(filepaths)),
+          file=sys.stderr)
 
 
 if __name__ == '__main__':
+    print("{0} - Starting bam2fast5.".format(
+        timestamp()), file=sys.stderr)
     main()
+    print("{0} - Done with bam2fast5. Bye.".format(
+        timestamp()), file=sys.stderr)

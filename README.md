@@ -26,11 +26,10 @@ So if you wanted to pipe these paths into another program, you could do somethin
 
 The above example would copy the `fast5` files that are found in your `fastq` to `subset_dir/`.
 
-If there are any issues (with the program) let me know. 
+If there are any issues (with the program) let me know.
 
 ### Dependencies
 You need to have [`h5py`](https://github.com/h5py/h5py). You'll also need [`pysam`](https://github.com/pysam-developers/pysam) if you're going to be using SAM or BAM files. 
 
     pip install h5py
     pip install pysam
-    
