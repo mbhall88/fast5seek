@@ -15,8 +15,6 @@ The script will walk down into subdirectories as well, so you can just give it y
 
 What it does is read in `<in.fastq|in.bam|in.sam>` and extract the read id from each header. It then goes through all the fast5 files under `<fast_dir>` and checks whether their read id is in the set of read ids from `<in.fastq|in.bam|in.sam>`. If it is, the path to the file is written to it's own line in `<out.txt>`.
 
-Please see the github page for more detailed instructions. https://github.com/mbhall88/fast5_in_ref/
-
 Contributors:
 Michael Hall (github@mbhall88)
 Darrin Schultz (github@conchoecia)
@@ -29,6 +27,11 @@ import sys
 import h5py
 import time
 import progressbar
+import multiprocessing
+from multiprocessing import cpu_count
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool
+
 
 class FullPaths(argparse.Action):
     """Expand user- and relative-paths"""
@@ -238,6 +241,59 @@ def get_fast5_paths(fast5_dir):
     print(file=sys.stderr)
     return set(filepaths)
 
+def available_threads():
+    threads = cpu_count()
+    if threads >= 90:
+        return 90
+    else:
+        return threads
+
+def _run_preqc_preprocess_dummy(instance):
+    """This function is a helper class to run_preqc_preprocess().
+    Specifically, it just calls the PreqcAnalysis.preqc_preprocess()
+    function for each instance of class PreqcAnalysis to get around the
+    limitations of the multiprocessing module."""
+    instance.preqc_preprocess()
+
+def process_filepath_chunk(fast5_filepaths, read_ids, fastq_run_ids, i):
+    """Takes in a list of files and checks if they are one of the mapped files"""
+    final_filepath_list = []
+    #print("in instance {}".format(i), file=sys.stderr)
+    for filepath in fast5_filepaths:
+        try:
+            fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
+        except Exception:  # file cannot be opened or is malformed
+            continue
+
+        # if the file is from a mapped read
+        if fast5_read_id in read_ids:
+            #print("found a match, {}".format(fast5_read_id))
+            # if fastq, make sure read and fastq are from the same
+            # experiment. Small chance read ids could be the same from
+            # diff. experiments. If not, skip file.
+            if fastq_run_ids:
+                if fast5_run_id not in fastq_run_ids:
+                    continue
+            final_filepath_list.append(filepath)
+    return final_filepath_list
+
+def determine_pool_size(job_vector):
+    """This function determines how large of a pool to make based on the
+    system resources currently available and how many jobs there are to complete
+    """
+    available_threads = cpu_count()
+    total_jobs = len(job_vector)
+    threads_to_pass = total_jobs
+    if total_jobs >= available_threads:
+        threads_to_pass = available_threads
+    return available_threads, total_jobs, threads_to_pass
+
+def chunks(l, n):
+    """Yield successive n-sized chunks from l.
+    https://stackoverflow.com/questions/312443/"""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
 def main():
     """The main method for the program. Runs each command independently.
     Steps:
@@ -303,28 +359,48 @@ def main():
     # Step 6
     # Iterate through fast5 filepaths and save paths containing a mapped read.
     final_filepath_list = []
-    bar = progressbar.ProgressBar()
-    print("{0} - Now looking through all .fast5 paths for matches.".format(
-        timestamp()), file=sys.stderr)
-    i = 0 # the number of files we looked at
-    for filepath in bar(sorted(fast5_filepaths)):
-        i += 1
-        bar.update(i)
-        try:
-            fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
-        except Exception:  # file cannot be opened or is malformed
-            continue
+    #bar = progressbar.ProgressBar()
+    #print("{0} - Now looking through all .fast5 paths for matches.".format(
+    #    timestamp()), file=sys.stderr)
+    #i = 0 # the number of files we looked at
+    #for filepath in bar(sorted(fast5_filepaths)):
+    #    i += 1
+    #    bar.update(i)
+    #    try:
+    #        fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
+    #    except Exception:  # file cannot be opened or is malformed
+    #        continue
 
-        # if the file is from a mapped read
-        if fast5_read_id in read_ids:
-            #print("found a match, {}".format(fast5_read_id))
-            # if fastq, make sure read and fastq are from the same
-            # experiment. Small chance read ids could be the same from
-            # diff. experiments. If not, skip file.
-            if fastq_run_ids:
-                if fast5_run_id not in fastq_run_ids:
-                    continue
-            final_filepath_list.append(filepath)
+    #    # if the file is from a mapped read
+    #    if fast5_read_id in read_ids:
+    #        #print("found a match, {}".format(fast5_read_id))
+    #        # if fastq, make sure read and fastq are from the same
+    #        # experiment. Small chance read ids could be the same from
+    #        # diff. experiments. If not, skip file.
+    #        if fastq_run_ids:
+    #            if fast5_run_id not in fastq_run_ids:
+    #                continue
+    #        final_filepath_list.append(filepath)
+
+    #process each file sequentially using max number of threads
+    #determine the pool size to work with the unique sample names
+    instances = list(chunks(sorted(fast5_filepaths), 250))
+    available_threads, total_jobs, pool_size = determine_pool_size(instances)
+    print("""{0} - There are {1} threads available.""".format(
+        timestamp(), available_threads), file=sys.stderr)
+    print("""{0}   - There are {1} jobs.""".format(
+        len(timestamp())*" ", total_jobs), file=sys.stderr)
+    print("""{0}   - Making a pool with {1} threads""".format(
+        len(timestamp())*" ", pool_size), file = sys.stderr)
+
+    instance_args = ( (instances[i], read_ids, fastq_run_ids, i) for i in range(len(instances)) )
+    start = time.time()
+
+    with multiprocessing.Pool(processes=pool_size) as pool:
+        results = pool.starmap(process_filepath_chunk, instance_args)
+    final_filepath_list = [ent for sublist in results for ent in sublist]
+    end = time.time()
+    print("time elapsed", end - start, file=sys.stderr)
 
     # Step 7
     # Convert the final filepath list to a set and print
