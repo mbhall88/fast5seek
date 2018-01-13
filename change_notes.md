@@ -1,3 +1,10 @@
+- 20180112 @conchoecia change notes
+  - Changed the parallelized version of the program to use tqdm instead
+    of progressbar. This shows the progress of parallelized processes.
+  - Added a heuristic to find the optimum number of files per process.
+    This should speed up the analyses drastically if there are many processes
+    on the computer being used.
+
 - 20171223 @conchoecia change notes
   - enable the user to input multiple reference files and multiple
     directories to search in
