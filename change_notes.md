@@ -33,6 +33,6 @@
   - refactored the code and made it more readable.
   - made all the messages say bam2fast5 since that makes more sense than fast5_in_ref (at least to me!)
 
-- 20170115 @mbhall88 change notes
+- 20180115 @mbhall88 change notes
   - changed name of repository to `bam2fast5`
   - changed all references of `fast5_in_ref` to `bam2fast5`
