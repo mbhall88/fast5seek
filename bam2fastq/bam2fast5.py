@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-from __future__ import print_function
-
 """
 Outputs paths of all the fast5 files from a
 given directory that are contained within a fastq or BAM/SAM file.
