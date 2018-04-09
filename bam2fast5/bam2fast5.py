@@ -96,12 +96,9 @@ def extract_read_ids(ref_path_list: List[str], mapped: bool) -> Set[str]:
 def get_fastq_read_ids(ref_path: str) -> Set[str]:
     """Extracts the read ids from a fastq file."""
     read_ids = set()
-    with open(ref_path, 'r') as ref:
-        for line in ref:
-            if line.startswith('@'):  # i.e if line is header
-                # split the line on spaces, take the first element, remove @
-                read_id = line.split(' ')[0].replace('@', '')
-                read_ids.add(read_id)
+    with pysam.FastxFile(ref_path) as fastq:
+        for entry in fastq:
+            read_ids.add(entry.name.strip())
 
     return read_ids
 
@@ -158,12 +155,10 @@ def get_fastq_run_ids(references: List[str]) -> Set[str]:
         extension = _get_file_extension(this_ref)
         if extension not in {'fastq', 'fq'}:
             continue
-        with open(this_ref, 'r') as ref:
-            for line in ref:
-                if not line.startswith('@'):
-                    continue
-                line_as_list = line.split(' ')
-                for field in line_as_list:
+        with pysam.FastxFile(this_ref) as fastq:
+            for entry in fastq:
+                comments = entry.comment.split(' ')
+                for field in comments:
                     if field.startswith('runid='):
                         fastq_run_ids.add(field.strip().replace('runid=', ''))
     return fastq_run_ids
