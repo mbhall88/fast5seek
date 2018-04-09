@@ -157,6 +157,8 @@ def get_fastq_run_ids(references: List[str]) -> Set[str]:
             continue
         with pysam.FastxFile(this_ref) as fastq:
             for entry in fastq:
+                if not entry.comment:  # no run id information in fastq header
+                    continue
                 comments = entry.comment.split(' ')
                 for field in comments:
                     if field.startswith('runid='):

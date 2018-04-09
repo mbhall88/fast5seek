@@ -110,3 +110,24 @@ class TestFastqReadIdExtraction(unittest.TestCase):
             '6c26d9b5-d892-4fc6-b035-abe575895c88'
         }
         self.assertSetEqual(result, expected)
+
+
+class TestFastqRunIdExtraction(unittest.TestCase):
+    """Test the read id extracxtion functions for fastq"""
+
+    def test_FastqRundIdExtractionTB_EmptySet(self):
+        """Test run id extracxtion from non-albacore fastq."""
+        fastq = 'tests/data/fastq/tb_mapped.fastq'
+        result = bam2fast5.get_fastq_run_ids([fastq])
+        expected = set()
+        self.assertSetEqual(result, expected)
+
+    def test_FastqRundIdExtractionAlbacore_TwoRunIds(self):
+        """Test run id extracxtion from non-albacore fastq."""
+        fastq = 'tests/data/fastq/basecalled.fastq.gz'
+        result = bam2fast5.get_fastq_run_ids([fastq])
+        expected = {
+            'bfa81348704ecd62c348b404e974a37daf030951',
+            'dc6ee09815f8baff16d92e7189e3a46d855f02b4'
+        }
+        self.assertSetEqual(result, expected)
