@@ -3,10 +3,13 @@
 import os
 import re
 import sys
-import h5py
 import time
-import progressbar
+import warnings
 
+# suppress annoying warning coming from this libraries use of h5py
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import h5py
 
 def timestamp():
     """

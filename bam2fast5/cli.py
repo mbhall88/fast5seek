@@ -1,18 +1,8 @@
 """
-Outputs paths of all the fast5 files from a
-given directory that are contained within a fastq or BAM/SAM file.
+Outputs paths of all the fast5 files from a given directory that are contained within a fastq or BAM/SAM file.
 
-Usage:
-
-It's pretty straight-forward to use:
-
-    ./bam2fast5 -i <fast5_dir> -r <in.fastq|in.bam|in.sam> -o <out.txt>
-
-The script will walk down into subdirectories as well, so you can just give it your directory containing all your files.
-
-What it does is read in `<in.fastq|in.bam|in.sam>` and extract the read id from each header. It then goes through all the fast5 files under `<fast_dir>` and checks whether their read id is in the set of read ids from `<in.fastq|in.bam|in.sam>`. If it is, the path to the file is written to it's own line in `<out.txt>`.
-
-Please see the github page for more detailed instructions. https://github.com/mbhall88/bam2fast5/
+Please see the github page for more detailed instructions.
+https://github.com/mbhall88/bam2fast5/
 
 Contributors:
 Michael Hall (github@mbhall88)
@@ -23,7 +13,6 @@ import os
 import sys
 import logging
 from bam2fast5 import bam2fast5
-
 
 
 def setup_logging(level):
@@ -41,9 +30,9 @@ def setup_logging(level):
                         format='[%(asctime)s]:%(levelname)s:%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p')
 
+
 class FullPaths(argparse.Action):
     """Expand user- and relative-paths"""
-
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest,
                 os.path.abspath(os.path.expanduser(values)))
@@ -59,7 +48,10 @@ class FullPathsList(argparse.Action):
 
 
 def cli():
-    parser = argparse.ArgumentParser(description=__doc__)
+    """Create command line interface and parse arguments for main program."""
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "-i", "--fast5_dir",
         action=FullPathsList,
@@ -93,12 +85,12 @@ def cli():
         choices=range(6))
 
     args = parser.parse_args()
-
+    print(args)
     setup_logging(args.log_level)
     logging.info(" Starting bam2fast5.")
-    # bam2fast5.main(args)
+    bam2fast5.main(args)
     logging.info(" Done with bam2fast5. Bye.")
+
 
 if __name__ == '__main__':
     sys.exit(cli())
-
