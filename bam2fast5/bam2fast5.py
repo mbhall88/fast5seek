@@ -4,7 +4,7 @@ import sys
 import warnings
 import logging
 import pysam
-from typing import List, Set
+from typing import List, Set, Generator
 
 # suppress annoying warning coming from this libraries use of h5py
 with warnings.catch_warnings():
@@ -140,53 +140,38 @@ def get_sam_read_ids(ref_path: str) -> Set[str]:
     return read_ids
 
 
-def get_fastq_run_ids(references):
+def get_fastq_run_ids(references: List[str]) -> Set[str]:
     """This method returns a set of fastq run ids if there are any fastq files.
     If there aren't any fastq files, it just returns and empty set."""
     fastq_run_ids = set()
     for this_ref in references:
         extension = _get_file_extension(this_ref)
-        if extension in {'fastq', 'fq'}:
-            with open(this_ref, 'r') as ref:
-                for line in ref:
-                    if line.startswith('@'):  # i.e if line is header
-                        line_as_list = line.split(' ')
-                        for field in line_as_list:
-                            if field.startswith('runid='):
-                                fastq_run_ids.add(
-                                    field.strip().replace('runid=', ''))
-
+        if extension not in {'fastq', 'fq'}:
+            continue
+        with open(this_ref, 'r') as ref:
+            for line in ref:
+                if not line.startswith('@'):
+                    continue
+                line_as_list = line.split(' ')
+                for field in line_as_list:
+                    if field.startswith('runid='):
+                        fastq_run_ids.add(field.strip().replace('runid=', ''))
     return fastq_run_ids
 
 
-def get_fast5_paths(fast5_dir):
-    """Input is a single directory that could contain fast5 files.
-    Output is a set containing all of the paths to the fast5 files in those directories.
+def scantree(path: str, ext: str) -> Generator:
+    """Recursively scans a directory and returns file paths ending in a given
+    extension.
+    :param path: Directory to scan.
+    :param ext: Yield files with this extension.
+    :returns Yields path to each file ending in extension.
     """
-    # Programmer's notes (@conchoecia): This method only takes a single
-    #  directory as an argument rather than a list of directories. The reason
-    #  for this is that a single-element list containing a single filepath as a
-    #  string is iterated through like "/path/to/file.txt".split("/"), where
-    #  every slash is another element. Only using one path as a string avoids
-    #  misinterpreting the path and trying to scan the root directory, '/".
-    filepaths = []
-    widgets = ["{0}     - Searched at least ".format(len(timestamp()) * " "),
-               progressbar.Counter(),
-               " files. ",
-               progressbar.Timer()]
-    bar = progressbar.ProgressBar(widgets=widgets,
-                                  max_value=progressbar.UnknownLength)
-    i = 0
-    for root, dirs, files in os.walk(fast5_dir):
-        for this_file in files:
-            i += 1
-            bar.update(i)
-            if this_file.endswith(".fast5"):
-                filepath = os.path.join(root, this_file)
-                filepaths.append(filepath)
-    # forces the pointer to the next line
-    print(file=sys.stderr)
-    return set(filepaths)
+    for entry in os.scandir(path):
+        if entry.is_dir(follow_symlinks=False):
+            for nested_entry in scantree(entry.path, ext):
+                yield nested_entry
+        elif entry.is_file() and entry.name.endswith(ext):
+            yield entry.path
 
 
 def main(args):
@@ -209,37 +194,27 @@ def main(args):
 
     read_ids = extract_read_ids(args.reference)
     logging.info(" Found {} unique read ids".format(len(read_ids)))
-    logging.debug(" To check for formatting normalcy, here are the first five:")
+    logging.debug(" To check for formatting normality, here are the first five:")
     for i in range(5):
         logging.debug("   - {0}".format(list(read_ids)[i]))
 
-    # Step 4, figure out if there is a fastq file in the list of references.
+    # Step 3, figure out if there is a fastq file in the list of references.
     #  If so, make a set of all the run ids.
     #  This is used to avoid conflicts with fast5 files names and run ids.
     fastq_run_ids = get_fastq_run_ids(args.reference)
-    # if there are any fastq run ids, print them out nicely
-    if fastq_run_ids:
-        print("{0} - We found the following fastq run ids:".format(
-            timestamp()), file=sys.stderr)
-        for run_id in sorted(fastq_run_ids):
-            print("{0}   - {1}".format(
-                len(timestamp()) * " ", run_id), file=sys.stderr)
 
-    # Step 5
-    # collect all of the filepaths into a (very large) set object
-    # We can run through this iteratively or through parallelization
-    print("{0} - Now collecting fast5 filepaths to process.".format(
-        timestamp()), file=sys.stderr)
+    if fastq_run_ids:
+        logging.debug(" Found the following fastq run ids:")
+        for run_id in sorted(fastq_run_ids):
+            logging.debug("\t- {}".format(run_id))
+
+    # Step 4
+    # collect all of the fast5 filepaths
     fast5_filepaths = set()
     for this_path in args.fast5_dir:
-        print("{0}   - {1}".format(
-            len(timestamp()) * " ", this_path), file=sys.stderr)
-        new_pathset = get_fast5_paths(this_path)
-        print("{0}     - Found {1} .fast5 files.".format(
-            len(timestamp()) * " ", len(new_pathset)), file=sys.stderr)
+        new_pathset = list(scantree(this_path, ext='.fast5'))
         fast5_filepaths |= new_pathset
-    print("{0}   - Found {1} .fast5 files total.".format(
-        len(timestamp()) * " ", len(fast5_filepaths)), file=sys.stderr)
+    logging.info(" Found {0} fast5 files.".format(len(fast5_filepaths)))
 
     # Step 6
     # Iterate through fast5 filepaths and save paths containing a mapped read.
