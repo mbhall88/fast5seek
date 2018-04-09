@@ -1,21 +1,14 @@
-
-
 import os
 import re
 import sys
-import time
 import warnings
+import logging
 
 # suppress annoying warning coming from this libraries use of h5py
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import h5py
 
-def timestamp():
-    """
-    Returns the current time in :samp:`YYYY-MM-DD HH:MM:SS` format.
-    """
-    return time.strftime("%Y%m%d_%H%M%S")
 
 def get_read_group(list_of_names):
     """Extracts the correct group name for the group containing the read_id"""
@@ -183,25 +176,20 @@ def get_fast5_paths(fast5_dir):
 def main(args):
     """The main method for the program. Runs each command independently.
     Steps:
-    1) Collect the arguments.
-    2) Determine the outfile
-    3) Get a set of read ids that map to the reference.
-    4) Get a set of fastq run ids if the references contain any fastq files.
-    5) Get a set of fast5 filepaths to look through in step 6.
-    6) Iterate through fast5 filepaths and save paths containing a mapped read.
+    1) Determine the outfile
+    2) Get a set of read ids that map to the reference.
+    3) Get a set of fastq run ids if the references contain any fastq files.
+    4) Get a set of fast5 filepaths to look through in step 6.
+    5) Iterate through fast5 filepaths and save paths containing a mapped read.
     """
-
-    # Step 2, determine the outfile
+    # Step 1, determine the outfile
     # if no output is given, write to stdout
     out_file = args.output or sys.stdout
 
-    # Step 3, get a set of the read ids in the fastq or BAM/SAM file
-    #  use the list comprehension to nicely print out the list of references.
-    print("{0} - Looking for reads to extract in the following ref files:".format(
-        timestamp()), file=sys.stderr)
-    for ref_file in [os.path.split(x)[1] for x in args.reference]:
-        print("{0}   - {1}".format(
-            len(timestamp())*" ", ref_file), file=sys.stderr)
+    # Step 2, get a set of the read ids in the fastq or BAM/SAM file
+    logging.info(" Looking for reads to extract in the following ref files:")
+    for ref_file in [os.path.split(ref_path)[1] for ref_path in args.reference]:
+        logging.info(" {}".format(ref_file))
 
     read_ids = extract_read_ids(args.reference)
     print("{0} - We found {1} unique read ids".format(timestamp(), len(read_ids)),
