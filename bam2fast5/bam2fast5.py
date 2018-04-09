@@ -1,25 +1,5 @@
-"""
-Outputs paths of all the fast5 files from a
-given directory that are contained within a fastq or BAM/SAM file.
 
-Usage:
 
-It's pretty straight-forward to use:
-
-    ./bam2fast5 -i <fast5_dir> -r <in.fastq|in.bam|in.sam> -o <out.txt>
-
-The script will walk down into subdirectories as well, so you can just give it your directory containing all your files.
-
-What it does is read in `<in.fastq|in.bam|in.sam>` and extract the read id from each header. It then goes through all the fast5 files under `<fast_dir>` and checks whether their read id is in the set of read ids from `<in.fastq|in.bam|in.sam>`. If it is, the path to the file is written to it's own line in `<out.txt>`.
-
-Please see the github page for more detailed instructions. https://github.com/mbhall88/bam2fast5/
-
-Contributors:
-Michael Hall (github@mbhall88)
-Darrin Schultz (github@conchoecia)
-"""
-
-import argparse
 import os
 import re
 import sys
@@ -27,44 +7,6 @@ import h5py
 import time
 import progressbar
 
-class FullPaths(argparse.Action):
-    """Expand user- and relative-paths"""
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest,
-                os.path.abspath(os.path.expanduser(values)))
-
-class FullPathsList(argparse.Action):
-    """Expand user- and relative-paths"""
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest,
-                [os.path.abspath(os.path.expanduser(value)) for value in values])
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "-i", "--fast5_dir",
-        action=FullPathsList,
-        help="""Directory of fast5 files you want to query. Program will
-        walk recursively through subdirectories.""",
-        type=str,
-        nargs = "+",
-        required=True)
-
-    parser.add_argument(
-        "-r", "--reference",
-        action=FullPathsList,
-        help="""Fastq or BAM/SAM file.""",
-        nargs = "+",
-        required=True)
-
-    parser.add_argument(
-        "-o", "--output",
-        action=FullPaths,
-        help="""Filename to write fast5 paths to. If nothing is entered,
-        it will write the paths to STDOUT.""",
-        default=None)
-
-    return parser.parse_args()
 
 def timestamp():
     """
@@ -235,7 +177,7 @@ def get_fast5_paths(fast5_dir):
     print(file=sys.stderr)
     return set(filepaths)
 
-def main():
+def main(args):
     """The main method for the program. Runs each command independently.
     Steps:
     1) Collect the arguments.
@@ -245,8 +187,6 @@ def main():
     5) Get a set of fast5 filepaths to look through in step 6.
     6) Iterate through fast5 filepaths and save paths containing a mapped read.
     """
-    # Step 1, collect the arguments
-    args = parse_arguments()
 
     # Step 2, determine the outfile
     # if no output is given, write to stdout
@@ -333,9 +273,3 @@ def main():
         timestamp(), len(final_filepath_set)),
           file=sys.stderr)
 
-if __name__ == '__main__':
-    print("{0} - Starting bam2fast5.".format(
-        timestamp()), file=sys.stderr)
-    main()
-    print("{0} - Done with bam2fast5. Bye.".format(
-        timestamp()), file=sys.stderr)
