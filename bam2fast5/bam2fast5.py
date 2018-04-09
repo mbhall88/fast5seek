@@ -51,9 +51,14 @@ def get_read_and_run_id(filepath):
             filepath), file=sys.stderr)
         raise err
 
+
 def _get_file_extension(filepath):
     """returns the file extension of filepath arg"""
-    return os.path.splitext(filepath)[1][1:]
+    name, ext = os.path.splitext(filepath)
+    if ext == '.gz':
+        return os.path.splitext(name)[-1][1:]
+    else:
+        return ext[1:]
 
 def extract_read_ids(ref_path_list):
     """Extracts the all the read ids from the fastq file.
@@ -172,6 +177,7 @@ def get_fast5_paths(fast5_dir):
     # forces the pointer to the next line
     print(file=sys.stderr)
     return set(filepaths)
+
 
 def main(args):
     """The main method for the program. Runs each command independently.
