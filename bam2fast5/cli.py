@@ -76,6 +76,12 @@ def cli():
         default=None)
 
     parser.add_argument(
+        "-m", "--mapped",
+        action='store_true',
+        help="Only extract read ids for mapped reads in BAM/SAM files.",
+        default=False)
+
+    parser.add_argument(
         "--log_level",
         help="Level of logging. 0 is none, 5 is for debugging. Default is 4 "
              "which will report info, warnings, errors, and critical "

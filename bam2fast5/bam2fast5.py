@@ -65,13 +65,14 @@ def _get_file_extension(filepath: str) -> str:
         return ext[1:]
 
 
-def extract_read_ids(ref_path_list: List[str]) -> Set[str]:
+def extract_read_ids(ref_path_list: List[str], mapped: bool) -> Set[str]:
     """Extracts the all the read ids from the fastq file.
     The read_id is the first part of the header and starts with an @
 
     Args:
         ref_path_list: Paths to the fastq or BAM/SAM files to extract
         read_ids from.
+        mapped: Only extract read ids from mapped reads in BAM/SAM files.
 
     Returns:
         read_ids: A set of all the read ids in the fastq file.
@@ -81,7 +82,7 @@ def extract_read_ids(ref_path_list: List[str]) -> Set[str]:
     for ref_path in ref_path_list:
         extension = _get_file_extension(ref_path)
         if extension in {'bam', 'sam'}:
-            read_ids |= get_sam_read_ids(ref_path)
+            read_ids |= get_sam_read_ids(ref_path, mapped)
         elif extension in {'fq', 'fastq'}:
             read_ids |= get_fastq_read_ids(ref_path)
         else:
@@ -126,15 +127,24 @@ def _clean_sambam_id(inputname: str) -> str:
     return "-".join(splitname)
 
 
-def get_sam_read_ids(ref_path: str) -> Set[str]:
-    """Extract the read ids from a BAM or SAM file."""
+def get_sam_read_ids(ref_path: str, mapped: bool) -> Set[str]:
+    """Extract the read ids from a BAM or SAM file.
+
+    :param ref_path: Path to SAM/BAM file.
+    :param mapped: Only extract read ids from mapped reads in BAM/SAM files.
+
+    :return A set of read ids.
+    """
     read_ids = set()
     with pysam.AlignmentFile(ref_path, 'r', ignore_truncation=True) as ref:
         for read in ref:
-            # query_name is the query template name
-            # - sometimes there are additional characters after the id names
-            #    so we should use python string processing to split them up
-            cleanname = _clean_sambam_id(read.query_name)
+            read_is_mapped = not read.is_unmapped
+            if mapped and read_is_mapped:
+                cleanname = _clean_sambam_id(read.query_name)
+            elif not mapped:  # use wants all reads, mapped or unmapped
+                cleanname = _clean_sambam_id(read.query_name)
+            else:  # only want mapped reads but this read is unmapped
+                continue
             read_ids.add(cleanname)
 
     return read_ids
@@ -192,7 +202,7 @@ def main(args):
     for ref_file in [os.path.split(ref_path)[1] for ref_path in args.reference]:
         logging.info(" {}".format(ref_file))
 
-    read_ids = extract_read_ids(args.reference)
+    read_ids = extract_read_ids(args.reference, args.mapped)
     logging.info(" Found {} unique read ids".format(len(read_ids)))
     logging.debug(" To check for formatting normality, here are the first five:")
     for i in range(5):
