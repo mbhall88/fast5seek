@@ -85,17 +85,13 @@ class TestFastqReadIdExtraction(unittest.TestCase):
         }
         self.assertSetEqual(result, expected)
 
-    def test_FastqGzipReadIdExtractionTB_SixReadIds(self):
-        """Test read id extracxtion from fastq with 6 mapped reads"""
-        fastq = 'tests/data/fastq/tb_mapped.fastq.gz'
+    def test_FastqGzipReadIdExtractionEcoli_TwoReadIds(self):
+        """Test read id extracxtion from fastq with 2 mapped reads"""
+        fastq = 'tests/data/fastq/ecoli_mapped.fastq.gz'
         result = bam2fast5.get_fastq_read_ids(fastq)
         expected = {
-            '57d4cd63-3189-4006-93ec-bf3c8bfb2ce1',
-            'bbd563e9-1bf8-4268-92d5-45ccb8e3da72',
-            '8aecf428-af00-4791-b065-5d4abd798a29',
-            'd707ff64-6ade-477a-8b68-0b3c394ef3b1',
-            'c967d421-3da4-4e11-accf-0d3fb0155840',
-            '28acaa47-1cec-4a91-9abf-c780d27e6cc4'
+            '6cf511b6-1724-46bd-b5a4-59c18bb57343',
+            '6c26d9b5-d892-4fc6-b035-abe575895c88'
         }
         self.assertSetEqual(result, expected)
 
