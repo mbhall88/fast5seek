@@ -96,7 +96,7 @@ def cli():
 
     setup_logging(args.log_level)
     logging.info(" Starting bam2fast5.")
-    bam2fast5.main(args)
+    # bam2fast5.main(args)
     logging.info(" Done with bam2fast5. Bye.")
 
 if __name__ == '__main__':
