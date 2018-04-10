@@ -78,6 +78,10 @@ def extract_read_ids(ref_path_list: List[str], mapped: bool) -> Set[str]:
         read_ids: A set of all the read ids in the fastq file.
 
     """
+    logging.info(" Looking for reads to extract in the following ref files:")
+    for ref_file in [os.path.split(ref_path)[1] for ref_path in ref_path_list]:
+        logging.info(" {}".format(ref_file))
+
     read_ids = set()
     for ref_path in ref_path_list:
         extension = _get_file_extension(ref_path)
@@ -90,6 +94,12 @@ def extract_read_ids(ref_path_list: List[str], mapped: bool) -> Set[str]:
                 ' {0} is not a supported file format. Supported file types are:'
                 ' fastq, sam, and bam.\n\tSkipping {1}'.format(extension,
                                                                ref_path))
+    logging.info(" Found {} unique read ids".format(len(read_ids)))
+    logging.debug(
+        " To check for formatting normality, here are the first five:")
+    for i in range(5):
+        logging.debug("   - {0}".format(list(read_ids)[i]))
+
     return read_ids
 
 
@@ -163,6 +173,11 @@ def get_fastq_run_ids(references: List[str]) -> Set[str]:
                 for field in comments:
                     if field.startswith('runid='):
                         fastq_run_ids.add(field.strip().replace('runid=', ''))
+    if fastq_run_ids:
+        logging.debug(" Found the following fastq run ids:")
+        for run_id in sorted(fastq_run_ids):
+            logging.debug("\t- {}".format(run_id))
+
     return fastq_run_ids
 
 
@@ -195,25 +210,11 @@ def main(args):
     out_file = args.output or sys.stdout
 
     # Step 2, get a set of the read ids in the fastq or BAM/SAM file
-    logging.info(" Looking for reads to extract in the following ref files:")
-    for ref_file in [os.path.split(ref_path)[1] for ref_path in args.reference]:
-        logging.info(" {}".format(ref_file))
-
     read_ids = extract_read_ids(args.reference, args.mapped)
-    logging.info(" Found {} unique read ids".format(len(read_ids)))
-    logging.debug(" To check for formatting normality, here are the first five:")
-    for i in range(5):
-        logging.debug("   - {0}".format(list(read_ids)[i]))
 
-    # Step 3, figure out if there is a fastq file in the list of references.
-    #  If so, make a set of all the run ids.
+    # Step 3, determine if there are any fastq files with run ids in header.
     #  This is used to avoid conflicts with fast5 files names and run ids.
     fastq_run_ids = get_fastq_run_ids(args.reference)
-
-    if fastq_run_ids:
-        logging.debug(" Found the following fastq run ids:")
-        for run_id in sorted(fastq_run_ids):
-            logging.debug("\t- {}".format(run_id))
 
     # Step 4
     # collect all of the fast5 filepaths
