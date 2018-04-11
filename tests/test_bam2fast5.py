@@ -195,5 +195,26 @@ class TestFastqRunIdExtraction(unittest.TestCase):
         self.assertSetEqual(result, expected)
 
 
-class TestGetFast5ReadId(unittest.TestCase):
-    """Test read id extraction from fast5 file."""
+class TestGetFast5ReadAndRunId(unittest.TestCase):
+    """Test read id extraction from fast5 file.
+    TODO: Find a fast5 with more than one read id to test handling
+    """
+    def test_TBFast5File_OneReadAndRunID(self):
+        filepath = 'tests/data/fast5/tb1.fast5'
+        result = bam2fast5.get_read_and_run_id(filepath)
+        expected = ('d707ff64-6ade-477a-8b68-0b3c394ef3b1',
+                    'dc6ee09815f8baff16d92e7189e3a46d855f02b4')
+        self.assertTupleEqual(result, expected)
+
+    def test_EcoliFast5File_OneReadAndRunID(self):
+        filepath = 'tests/data/fast5/ecoli1.fast5'
+        result = bam2fast5.get_read_and_run_id(filepath)
+        expected = ('6cf511b6-1724-46bd-b5a4-59c18bb57343',
+                    'bfa81348704ecd62c348b404e974a37daf030951')
+        self.assertTupleEqual(result, expected)
+
+    def test_EmptyFast5File_EmptyTuple(self):
+        filepath = 'tests/data/fast5/empty.fast5'
+        result = bam2fast5.get_read_and_run_id(filepath)
+        expected = ('', '')
+        self.assertTupleEqual(result, expected)

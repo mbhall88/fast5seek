@@ -55,9 +55,15 @@ def get_read_and_run_id(filepath: str) -> Tuple[str, str]:
         (tuple[str, str]): The read_id and run_id
 
     """
-    fast5 = Fast5File(filepath)
-    read_id = get_fast5_read_id(fast5, filepath)
-    run_id = get_fast5_run_id(fast5, filepath)
+    read_id = ''
+    run_id = ''
+    try:
+        fast5 = Fast5File(filepath)
+        read_id = get_fast5_read_id(fast5, filepath)
+        run_id = get_fast5_run_id(fast5, filepath)
+    except OSError:  # issue trying to open fast5 file
+        logging.error(" Error when trying to open {}\n"
+                      "Skipping...".format(filepath))
 
     return read_id, run_id
 
@@ -102,10 +108,6 @@ def extract_read_ids(ref_path_list: List[str], mapped: bool) -> Set[str]:
                 ' fastq, sam, and bam.\n\tSkipping {1}'.format(extension,
                                                                ref_path))
     logging.info(" Found {} unique read ids".format(len(read_ids)))
-    logging.debug(
-        " To check for formatting normality, here are the first five:")
-    for i in range(5):
-        logging.debug("   - {0}".format(list(read_ids)[i]))
 
     return read_ids
 
