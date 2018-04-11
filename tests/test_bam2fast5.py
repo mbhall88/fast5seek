@@ -218,3 +218,38 @@ class TestGetFast5ReadAndRunId(unittest.TestCase):
         result = bam2fast5.get_read_and_run_id(filepath)
         expected = ('', '')
         self.assertTupleEqual(result, expected)
+
+
+class TestCollectFast5Filepaths(unittest.TestCase):
+    """Test function that collects all the unique fast5 filepaths."""
+    def test_OneFast5Directory_EightFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        result = bam2fast5.collect_fast5_filepaths(fast5_dir)
+        expected = {
+            'tests/data/fast5/ecoli1.fast5',
+            'tests/data/fast5/ecoli2.fast5',
+            'tests/data/fast5/empty.fast5',
+            'tests/data/fast5/tb1.fast5',
+            'tests/data/fast5/tb2.fast5',
+            'tests/data/fast5/tb3.fast5',
+            'tests/data/fast5/tb4.fast5',
+            'tests/data/fast5/tb5.fast5',
+            'tests/data/fast5/tb6.fast5',
+        }
+        self.assertSetEqual(result, expected)
+
+    def test_TwoFast5Directory_EightFilepaths(self):
+        fast5_dir = ['tests/data/fast5', 'tests/data']
+        result = bam2fast5.collect_fast5_filepaths(fast5_dir)
+        expected = {
+            'tests/data/fast5/ecoli1.fast5',
+            'tests/data/fast5/ecoli2.fast5',
+            'tests/data/fast5/empty.fast5',
+            'tests/data/fast5/tb1.fast5',
+            'tests/data/fast5/tb2.fast5',
+            'tests/data/fast5/tb3.fast5',
+            'tests/data/fast5/tb4.fast5',
+            'tests/data/fast5/tb5.fast5',
+            'tests/data/fast5/tb6.fast5',
+        }
+        self.assertSetEqual(result, expected)

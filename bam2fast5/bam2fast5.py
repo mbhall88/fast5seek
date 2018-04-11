@@ -1,37 +1,28 @@
 import os
-import re
 import sys
 import warnings
 import logging
 import pysam
 from typing import List, Set, Generator, Tuple
 
-# suppress annoying warning coming from this libraries use of h5py
+# suppress annoying warning coming from h5py
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from ont_fast5_api.fast5_file import Fast5File
 
 
-def get_read_group(list_of_names: List[str]) -> str:
-    """Extracts the correct group name for the group containing the read_id"""
-    for name in list_of_names:
-        if re.search(r'Read_\d+$', name):
-            return name
-
-
 def get_fast5_read_id(fast5: Fast5File, filepath: str) -> str:
     """Extracts the read id from a given fast5 file."""
+    read_id = ''
     read_id_map = list(fast5.status.read_id_map.keys())
     if len(read_id_map) == 1:
         read_id = read_id_map[0]
     elif len(read_id_map) > 1:
         logging.warning(" More than one read id found for {}\n"
                         "Skipping this file.".format(filepath))
-        read_id = ''
     else:  # no read id
         logging.warning(" No read id found for {}\n"
                         " Skipping this file.".format(filepath))
-        read_id = ''
     return read_id
 
 
@@ -48,12 +39,9 @@ def get_read_and_run_id(filepath: str) -> Tuple[str, str]:
     """Extracts the read_id and run_id from a given fast5 file.
     If the file cannot be opened, it will be skipped.
 
-    Args:
-        filepath: Path to the fast5 file.
+    :param filepath: Path to the fast5 file.
 
-    Returns:
-        (tuple[str, str]): The read_id and run_id
-
+    :returns The read_id and run_id as a tuple
     """
     read_id = ''
     run_id = ''
@@ -205,35 +193,45 @@ def scantree(path: str, ext: str) -> Generator:
             yield entry.path
 
 
+def collect_fast5_filepaths(fast5_dir: List[str]) -> Set[str]:
+    """Get a list of all fast5 filepaths under the given directory/directories.
+
+    :param fast5_dir: Directory or directories to search recursively under.
+
+    :returns Set of all the fast5 filepaths under fast5_dir
+    """
+    fast5_filepaths = set()
+    for this_path in fast5_dir:
+        new_pathset = scantree(this_path, ext='.fast5')
+        fast5_filepaths |= set(new_pathset)
+    logging.info(" Found {0} fast5 files.".format(len(fast5_filepaths)))
+
+    return fast5_filepaths
+
+
 def main(args):
     """The main method for the program.
     Steps:
-    1) Determine the outfile
-    2) Get a set of read ids that map to the reference.
-    3) Get a set of fastq run ids if the references contain any fastq files.
-    4) Get a set of fast5 filepaths to look through in step 6.
+    1) Determine the outfile or write to stdout if none given
+    2) Get a set of read ids that map to the reference (fastq, sam, bam).
+    3) Determine if there are any fastq files with run ids in header.
+       This is used to avoid conflicts with fast5 file names and run ids.
+    4) Get a set of fast5 filepaths to look through.
     5) Iterate through fast5 filepaths and save paths containing a mapped read.
     """
-    # Step 1, determine the outfile. If no output is given, write to stdout
+    # Step 1
     out_file = args.output or sys.stdout
 
-    # Step 2, get a set of the read ids in the fastq or BAM/SAM file
+    # Step 2
     read_ids = extract_read_ids(args.reference, args.mapped)
 
-    # Step 3, determine if there are any fastq files with run ids in header.
-    # This is used to avoid conflicts with fast5 file names and run ids.
+    # Step 3
     fastq_run_ids = get_fastq_run_ids(args.reference)
 
     # Step 4
-    # collect all of the fast5 filepaths
-    fast5_filepaths = set()
-    for this_path in args.fast5_dir:
-        new_pathset = list(scantree(this_path, ext='.fast5'))
-        fast5_filepaths |= new_pathset
-    logging.info(" Found {0} fast5 files.".format(len(fast5_filepaths)))
+    fast5_filepaths = collect_fast5_filepaths(args.fast5_dir)
 
     # Step 5
-    # Iterate through fast5 filepaths and save paths containing a mapped read.
     final_filepath_list = []
 
     i = 0  # the number of files we looked at
