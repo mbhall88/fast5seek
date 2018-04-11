@@ -8,8 +8,8 @@ name = "pypi"
 [packages]
 
 pysam = "*"
-"h5py" = "*"
 "e1839a8" = {path = ".", editable = true}
+"ont-fast5-api" = "*"
 
 
 [dev-packages]

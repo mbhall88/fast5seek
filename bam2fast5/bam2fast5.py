@@ -4,55 +4,62 @@ import sys
 import warnings
 import logging
 import pysam
-from typing import List, Set, Generator
+from typing import List, Set, Generator, Tuple
 
 # suppress annoying warning coming from this libraries use of h5py
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    import h5py
+    from ont_fast5_api.fast5_file import Fast5File
 
 
-def get_read_group(list_of_names):
+def get_read_group(list_of_names: List[str]) -> str:
     """Extracts the correct group name for the group containing the read_id"""
     for name in list_of_names:
         if re.search(r'Read_\d+$', name):
             return name
 
 
-def get_read_and_run_id(filepath):
+def get_fast5_read_id(fast5: Fast5File, filepath: str) -> str:
+    """Extracts the read id from a given fast5 file."""
+    read_id_map = list(fast5.status.read_id_map.keys())
+    if len(read_id_map) == 1:
+        read_id = read_id_map[0]
+    elif len(read_id_map) > 1:
+        logging.warning(" More than one read id found for {}\n"
+                        "Skipping this file.".format(filepath))
+        read_id = ''
+    else:  # no read id
+        logging.warning(" No read id found for {}\n"
+                        " Skipping this file.".format(filepath))
+        read_id = ''
+    return read_id
+
+
+def get_fast5_run_id(fast5: Fast5File, filepath: str) -> str:
+    """Extracts the run id from a given fast5 file."""
+    run_id = fast5.get_tracking_id().get('run_id', '')
+    if run_id == '':
+        logging.warning(" No run id found for {}\nFile can still be "
+                        "used if read id is present".format(filepath))
+    return run_id
+
+
+def get_read_and_run_id(filepath: str) -> Tuple[str, str]:
     """Extracts the read_id and run_id from a given fast5 file.
     If the file cannot be opened, it will be skipped.
 
     Args:
-        filepath (str): Path to the fast5 file.
+        filepath: Path to the fast5 file.
 
     Returns:
         (tuple[str, str]): The read_id and run_id
 
     """
-    group = 'Raw/Reads/'
-    try:
-        with h5py.File(filepath, 'r') as fast5:
-            list_of_names = []
-            # get all group names in the Raw/Reads group
-            fast5['Raw/Reads'].visit(list_of_names.append)
-            # extracts the group name that ends in the pattern 'Read_\d+'
-            # where \d+ is any number of digits
-            read_group = get_read_group(list_of_names)
-            group += read_group
-            try:
-                run_id = fast5['UniqueGlobalKey/tracking_id/'].attrs['run_id']
-            except KeyError as err:  # skip malformed files that don't have read id
-                print("""{} has a malformed read id. Skipping...""".format(
-                    filepath), file=sys.stderr)
-                raise err
-            return fast5[group].attrs[
-                       'read_id'].decode(), run_id.decode()  # the read_id
+    fast5 = Fast5File(filepath)
+    read_id = get_fast5_read_id(fast5, filepath)
+    run_id = get_fast5_run_id(fast5, filepath)
 
-    except IOError as err:  # skip file if it cannot be opened
-        print("""{} could not be opened. Skipping...""".format(
-            filepath), file=sys.stderr)
-        raise err
+    return read_id, run_id
 
 
 def _get_file_extension(filepath: str) -> str:
@@ -197,7 +204,7 @@ def scantree(path: str, ext: str) -> Generator:
 
 
 def main(args):
-    """The main method for the program. Runs each command independently.
+    """The main method for the program.
     Steps:
     1) Determine the outfile
     2) Get a set of read ids that map to the reference.
@@ -205,15 +212,14 @@ def main(args):
     4) Get a set of fast5 filepaths to look through in step 6.
     5) Iterate through fast5 filepaths and save paths containing a mapped read.
     """
-    # Step 1, determine the outfile
-    # if no output is given, write to stdout
+    # Step 1, determine the outfile. If no output is given, write to stdout
     out_file = args.output or sys.stdout
 
     # Step 2, get a set of the read ids in the fastq or BAM/SAM file
     read_ids = extract_read_ids(args.reference, args.mapped)
 
     # Step 3, determine if there are any fastq files with run ids in header.
-    #  This is used to avoid conflicts with fast5 files names and run ids.
+    # This is used to avoid conflicts with fast5 file names and run ids.
     fastq_run_ids = get_fastq_run_ids(args.reference)
 
     # Step 4
@@ -224,16 +230,13 @@ def main(args):
         fast5_filepaths |= new_pathset
     logging.info(" Found {0} fast5 files.".format(len(fast5_filepaths)))
 
-    # Step 6
+    # Step 5
     # Iterate through fast5 filepaths and save paths containing a mapped read.
     final_filepath_list = []
-    bar = progressbar.ProgressBar()
-    print("{0} - Now looking through all .fast5 paths for matches.".format(
-        timestamp()), file=sys.stderr)
+
     i = 0  # the number of files we looked at
-    for filepath in bar(sorted(fast5_filepaths)):
+    for filepath in fast5_filepaths:
         i += 1
-        bar.update(i)
         try:
             fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
         except Exception:  # file cannot be opened or is malformed

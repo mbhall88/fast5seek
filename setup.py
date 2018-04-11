@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
-requirements = ['h5py', 'pysam']
+requirements = ['ont_fast5_api', 'pysam']
 
 setup_requirements = [ ]
 

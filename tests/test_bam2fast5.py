@@ -193,3 +193,7 @@ class TestFastqRunIdExtraction(unittest.TestCase):
             'dc6ee09815f8baff16d92e7189e3a46d855f02b4'
         }
         self.assertSetEqual(result, expected)
+
+
+class TestGetFast5ReadId(unittest.TestCase):
+    """Test read id extraction from fast5 file."""
