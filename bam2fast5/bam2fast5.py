@@ -193,12 +193,11 @@ def scantree(path: str, ext: str) -> Generator:
             yield entry.path
 
 
-def collect_fast5_filepaths(fast5_dir: List[str]) -> Set[str]:
+def collect_all_fast5_filepaths(fast5_dir: List[str]) -> Set[str]:
     """Get a list of all fast5 filepaths under the given directory/directories.
 
     :param fast5_dir: Directory or directories to search recursively under.
-
-    :returns Set of all the fast5 filepaths under fast5_dir
+    :return Set of all the fast5 filepaths under fast5_dir
     """
     fast5_filepaths = set()
     for this_path in fast5_dir:
@@ -207,6 +206,33 @@ def collect_fast5_filepaths(fast5_dir: List[str]) -> Set[str]:
     logging.info(" Found {0} fast5 files.".format(len(fast5_filepaths)))
 
     return fast5_filepaths
+
+
+def collect_present_fast5_filepaths(fast5_filepaths: Set[str],
+                                    read_ids: Set[str],
+                                    run_ids: Set[str]) -> List[str]:
+    """Filters out filepaths whose read/run id are not contained in those
+    previously found in the reference files.
+
+    :param fast5_filepaths: Set of all fast5 files to search.
+    :param read_ids: Set of read ids found in the reference BAM/SAM/Fastq
+    :param run_ids: Set of any run ids found in fastq files.
+    :return: List of all fast5 filepaths present in the reference files.
+    """
+    final_filepath_list = []
+    for i, filepath in enumerate(fast5_filepaths):
+        fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
+
+        # if the file is from a mapped read
+        if fast5_read_id in read_ids:
+            if run_ids:
+                if fast5_run_id not in run_ids:
+                    logging.warning(" Found read id match but no run id. "
+                                    "Adding {} but beware there is a very "
+                                    "small chance two reads could have the "
+                                    "same read id.".format(filepath))
+            final_filepath_list.append(filepath)
+    return final_filepath_list
 
 
 def main(args):
@@ -226,32 +252,14 @@ def main(args):
     read_ids = extract_read_ids(args.reference, args.mapped)
 
     # Step 3
-    fastq_run_ids = get_fastq_run_ids(args.reference)
+    run_ids = get_fastq_run_ids(args.reference)
 
     # Step 4
-    fast5_filepaths = collect_fast5_filepaths(args.fast5_dir)
+    fast5_filepaths = collect_all_fast5_filepaths(args.fast5_dir)
 
     # Step 5
-    final_filepath_list = []
-
-    i = 0  # the number of files we looked at
-    for filepath in fast5_filepaths:
-        i += 1
-        try:
-            fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
-        except Exception:  # file cannot be opened or is malformed
-            continue
-
-        # if the file is from a mapped read
-        if fast5_read_id in read_ids:
-            # print("found a match, {}".format(fast5_read_id))
-            # if fastq, make sure read and fastq are from the same
-            # experiment. Small chance read ids could be the same from
-            # diff. experiments. If not, skip file.
-            if fastq_run_ids:
-                if fast5_run_id not in fastq_run_ids:
-                    continue
-            final_filepath_list.append(filepath)
+    final_filepath_list = collect_present_fast5_filepaths(fast5_filepaths,
+                                                          read_ids, run_ids)
 
     # Step 7
     # Convert the final filepath list to a set and print

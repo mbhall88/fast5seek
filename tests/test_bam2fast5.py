@@ -220,11 +220,11 @@ class TestGetFast5ReadAndRunId(unittest.TestCase):
         self.assertTupleEqual(result, expected)
 
 
-class TestCollectFast5Filepaths(unittest.TestCase):
+class TestCollectAllFast5Filepaths(unittest.TestCase):
     """Test function that collects all the unique fast5 filepaths."""
     def test_OneFast5Directory_EightFilepaths(self):
         fast5_dir = ['tests/data/fast5']
-        result = bam2fast5.collect_fast5_filepaths(fast5_dir)
+        result = bam2fast5.collect_all_fast5_filepaths(fast5_dir)
         expected = {
             'tests/data/fast5/ecoli1.fast5',
             'tests/data/fast5/ecoli2.fast5',
@@ -240,7 +240,7 @@ class TestCollectFast5Filepaths(unittest.TestCase):
 
     def test_TwoFast5Directory_EightFilepaths(self):
         fast5_dir = ['tests/data/fast5', 'tests/data']
-        result = bam2fast5.collect_fast5_filepaths(fast5_dir)
+        result = bam2fast5.collect_all_fast5_filepaths(fast5_dir)
         expected = {
             'tests/data/fast5/ecoli1.fast5',
             'tests/data/fast5/ecoli2.fast5',
@@ -253,3 +253,73 @@ class TestCollectFast5Filepaths(unittest.TestCase):
             'tests/data/fast5/tb6.fast5',
         }
         self.assertSetEqual(result, expected)
+
+
+class TestCollectPresentFast5Filepaths(unittest.TestCase):
+    """Test function that collects all the present fast5 filepaths."""
+    def test_OneFast5FileOneReadIdOneRunId_Present(self):
+        filepath = {'tests/data/fast5/tb1.fast5'}
+        read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
+        run_ids = {'dc6ee09815f8baff16d92e7189e3a46d855f02b4'}
+        result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
+                                                           run_ids)
+        expected = ['tests/data/fast5/tb1.fast5']
+        self.assertListEqual(result, expected)
+
+    def test_OneFast5FileOneReadIdNoRunId_Present(self):
+        filepath = {'tests/data/fast5/tb1.fast5'}
+        read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
+        run_ids = set()
+        result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
+                                                           run_ids)
+        expected = ['tests/data/fast5/tb1.fast5']
+        self.assertListEqual(result, expected)
+
+    def test_OneFast5FileNoReadIdNoRunId_EmptyList(self):
+        filepath = {'tests/data/fast5/tb1.fast5'}
+        read_ids = set()
+        run_ids = set()
+        result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
+                                                           run_ids)
+        expected = []
+        self.assertListEqual(result, expected)
+
+    def test_TwoFast5FileOneReadIdNoRunId_OneFast5Path(self):
+        filepath = {'tests/data/fast5/tb1.fast5', 'tests/data/fast5/tb3.fast5'}
+        read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
+        run_ids = set()
+        result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
+                                                           run_ids)
+        expected = ['tests/data/fast5/tb1.fast5']
+        self.assertListEqual(result, expected)
+
+    def test_TwoFast5FileOneReadIdNoRunId_NoFast5Path(self):
+        filepath = {'tests/data/fast5/tb1.fast5', 'tests/data/fast5/tb3.fast5'}
+        read_ids = {'not a real read id'}
+        run_ids = set()
+        result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
+                                                           run_ids)
+        expected = []
+        self.assertListEqual(result, expected)
+
+    def test_TwoFast5FileOneReadIdNoRunId_OneFast5PathNoError(self):
+        filepath = {'tests/data/fast5/tb1.fast5',
+                    'tests/data/fast5/empty.fast5'}
+        read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
+        run_ids = set()
+        result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
+                                                           run_ids)
+        expected = ['tests/data/fast5/tb1.fast5']
+        self.assertListEqual(result, expected)
+
+    def test_TwoFast5FileTwoReadIdOneRunId_TwoFast5Paths(self):
+        filepath = {'tests/data/fast5/tb1.fast5',
+                    'tests/data/fast5/ecoli1.fast5'}
+        read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1',
+                    '6cf511b6-1724-46bd-b5a4-59c18bb57343'}
+        run_ids = set('bfa81348704ecd62c348b404e974a37daf030951')
+        result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
+                                                           run_ids)
+        expected = ['tests/data/fast5/tb1.fast5',
+                    'tests/data/fast5/ecoli1.fast5']
+        self.assertListEqual(result, expected)
