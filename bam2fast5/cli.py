@@ -90,6 +90,13 @@ def cli():
         type=int,
         choices=range(6))
 
+    parser.add_argument(
+        "--no_progress_bar",
+        help="Do not display progress bar.",
+        action='store_true',
+        default=False
+    )
+
     args = parser.parse_args()
     print(args)
     setup_logging(args.log_level)

@@ -3,7 +3,7 @@ import sys
 import warnings
 import logging
 import pysam
-from typing import List, Set, Generator, Tuple
+from typing import List, Set, Generator, Tuple, TextIO
 
 # suppress annoying warning coming from h5py
 with warnings.catch_warnings():
@@ -210,17 +210,25 @@ def collect_all_fast5_filepaths(fast5_dir: List[str]) -> Set[str]:
 
 def collect_present_fast5_filepaths(fast5_filepaths: Set[str],
                                     read_ids: Set[str],
-                                    run_ids: Set[str]) -> List[str]:
+                                    run_ids: Set[str],
+                                    write_progress_bar_to: TextIO) -> List[str]:
     """Filters out filepaths whose read/run id are not contained in those
     previously found in the reference files.
 
     :param fast5_filepaths: Set of all fast5 files to search.
     :param read_ids: Set of read ids found in the reference BAM/SAM/Fastq
     :param run_ids: Set of any run ids found in fastq files.
+    :param write_progress_bar_to: Where to write progress bar to. None will
+    not write progress bar anywhere.
     :return: List of all fast5 filepaths present in the reference files.
     """
     final_filepath_list = []
-    for i, filepath in enumerate(fast5_filepaths):
+    num_files = len(fast5_filepaths)
+
+    logging.info(" Scanning {} fast5 files for presence in "
+                 "references".format(num_files))
+
+    for files_checked, filepath in enumerate(fast5_filepaths):
         fast5_read_id, fast5_run_id = get_read_and_run_id(filepath)
 
         # if the file is from a mapped read
@@ -232,7 +240,44 @@ def collect_present_fast5_filepaths(fast5_filepaths: Set[str],
                                     "small chance two reads could have the "
                                     "same read id.".format(filepath))
             final_filepath_list.append(filepath)
+
+        if write_progress_bar_to:
+            update_progress(round(files_checked / num_files, 4),
+                            write_progress_bar_to)
+
+    if write_progress_bar_to:
+        update_progress(1.0, write_progress_bar_to)
+
+    logging.info(" Found {} fast5 paths present in references.".format(
+        len(final_filepath_list)))
+
     return final_filepath_list
+
+
+def update_progress(progress: float, write_progress_bar_to=sys.stdout):
+    """Creates and updates a progress bar.
+    Recognition to https://stackoverflow.com/a/15860757/5299417
+    :param progress: Value between 0 and 1 (percent as decimal)
+    :param write_progress_bar_to: Where to write progress bar to.
+    """
+    bar_length = 40  # Modify this to change the length of the progress bar
+    status = ""
+    if isinstance(progress, int):
+        progress = float(progress)
+    if not isinstance(progress, float):
+        progress = 0
+        status = "error: progress var must be float\r\n"
+    if progress < 0:
+        progress = 0
+        status = "Halt...\r\n"
+    if progress >= 1:
+        progress = 1
+        status = "Done...\r\n"
+    block = int(round(bar_length * progress))
+    text = "\rPercent: [{0}] {1}% {2}".format(
+        "#" * block + "-" * (bar_length - block), progress * 100, status)
+    write_progress_bar_to.write(text)
+    write_progress_bar_to.flush()
 
 
 def main(args):
@@ -244,6 +289,7 @@ def main(args):
        This is used to avoid conflicts with fast5 file names and run ids.
     4) Get a set of fast5 filepaths to look through.
     5) Iterate through fast5 filepaths and save paths containing a mapped read.
+    6) Output the final filepaths.
     """
     # Step 1
     out_file = args.output or sys.stdout
@@ -258,15 +304,17 @@ def main(args):
     fast5_filepaths = collect_all_fast5_filepaths(args.fast5_dir)
 
     # Step 5
+    show_progress_bar = not args.no_progress_bar
+    if show_progress_bar and out_file == sys.stdout:
+        progress_bar = sys.stderr
+    elif show_progress_bar and out_file != sys.stdout:
+        progress_bar = sys.stdout
+    else:
+        progress_bar = None
     final_filepath_list = collect_present_fast5_filepaths(fast5_filepaths,
-                                                          read_ids, run_ids)
+                                                          read_ids, run_ids,
+                                                          progress_bar)
 
-    # Step 7
-    # Convert the final filepath list to a set and print
-    final_filepath_set = set(final_filepath_list)
-    for thisfile in sorted(final_filepath_set):
-        print(thisfile, file=out_file)
-
-    print("\n{0} - {1} files found.".format(
-        timestamp(), len(final_filepath_set)),
-        file=sys.stderr)
+    # Step 6
+    for fast5_file in final_filepath_list:
+        print(fast5_file, file=out_file)

@@ -262,7 +262,7 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
         read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
         run_ids = {'dc6ee09815f8baff16d92e7189e3a46d855f02b4'}
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
-                                                           run_ids)
+                                                           run_ids, None)
         expected = ['tests/data/fast5/tb1.fast5']
         self.assertListEqual(result, expected)
 
@@ -271,7 +271,7 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
         read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
         run_ids = set()
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
-                                                           run_ids)
+                                                           run_ids, None)
         expected = ['tests/data/fast5/tb1.fast5']
         self.assertListEqual(result, expected)
 
@@ -280,7 +280,7 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
         read_ids = set()
         run_ids = set()
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
-                                                           run_ids)
+                                                           run_ids, None)
         expected = []
         self.assertListEqual(result, expected)
 
@@ -289,7 +289,7 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
         read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
         run_ids = set()
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
-                                                           run_ids)
+                                                           run_ids, None)
         expected = ['tests/data/fast5/tb1.fast5']
         self.assertListEqual(result, expected)
 
@@ -298,7 +298,7 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
         read_ids = {'not a real read id'}
         run_ids = set()
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
-                                                           run_ids)
+                                                           run_ids, None)
         expected = []
         self.assertListEqual(result, expected)
 
@@ -308,7 +308,7 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
         read_ids = {'d707ff64-6ade-477a-8b68-0b3c394ef3b1'}
         run_ids = set()
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
-                                                           run_ids)
+                                                           run_ids, None)
         expected = ['tests/data/fast5/tb1.fast5']
         self.assertListEqual(result, expected)
 
@@ -319,7 +319,7 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
                     '6cf511b6-1724-46bd-b5a4-59c18bb57343'}
         run_ids = set('bfa81348704ecd62c348b404e974a37daf030951')
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
-                                                           run_ids)
-        expected = ['tests/data/fast5/tb1.fast5',
-                    'tests/data/fast5/ecoli1.fast5']
-        self.assertListEqual(result, expected)
+                                                           run_ids, None)
+        expected = ['tests/data/fast5/ecoli1.fast5',
+                    'tests/data/fast5/tb1.fast5']
+        self.assertCountEqual(result, expected)
