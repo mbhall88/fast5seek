@@ -98,11 +98,12 @@ def cli():
     )
 
     args = parser.parse_args()
-    print(args)
     setup_logging(args.log_level)
+    if args.output is not None:
+        args.output = open(args.output, 'w')
     logging.info(" Starting bam2fast5.")
     bam2fast5.main(args)
-    logging.info(" Done with bam2fast5. Bye.")
+    logging.info(" Done.")
 
 
 if __name__ == '__main__':

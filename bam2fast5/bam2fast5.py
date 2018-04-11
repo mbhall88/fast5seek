@@ -306,14 +306,14 @@ def main(args):
     # Step 5
     show_progress_bar = not args.no_progress_bar
     if show_progress_bar and out_file == sys.stdout:
-        progress_bar = sys.stderr
+        write_progress_bar_to = sys.stderr
     elif show_progress_bar and out_file != sys.stdout:
-        progress_bar = sys.stdout
+        write_progress_bar_to = sys.stdout
     else:
-        progress_bar = None
+        write_progress_bar_to = None
     final_filepath_list = collect_present_fast5_filepaths(fast5_filepaths,
                                                           read_ids, run_ids,
-                                                          progress_bar)
+                                                          write_progress_bar_to)
 
     # Step 6
     for fast5_file in final_filepath_list:

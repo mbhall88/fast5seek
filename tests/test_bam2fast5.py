@@ -1,6 +1,8 @@
 """Tests for bam2fast5 package."""
 import unittest
 import logging
+import io
+from contextlib import redirect_stdout
 from bam2fast5 import bam2fast5
 
 logging.disable(logging.CRITICAL)
@@ -321,5 +323,134 @@ class TestCollectPresentFast5Filepaths(unittest.TestCase):
         result = bam2fast5.collect_present_fast5_filepaths(filepath, read_ids,
                                                            run_ids, None)
         expected = ['tests/data/fast5/ecoli1.fast5',
+                    'tests/data/fast5/tb1.fast5']
+        self.assertCountEqual(result, expected)
+
+
+class TestArgs(object):
+    """Class to create args object like that from argparse."""
+    def __init__(self, fast5_dir, reference, mapped, output=None):
+        self.output = output
+        self.fast5_dir = fast5_dir
+        self.reference = reference
+        self.mapped = mapped
+        self.log_level = 4
+        self.no_progress_bar = True
+
+
+class TestMain(unittest.TestCase):
+    """Test the main function of the program."""
+    def test_TBTestFast5DataFastq_SixFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        reference = ['tests/data/fastq/tb_mapped.fastq.gz']
+        args = TestArgs(fast5_dir, reference, True)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            bam2fast5.main(args)
+        stdout = f.getvalue()
+        result = [x for x in stdout.split('\n') if x]
+        expected = ['tests/data/fast5/tb5.fast5', 'tests/data/fast5/tb6.fast5',
+                    'tests/data/fast5/tb4.fast5', 'tests/data/fast5/tb3.fast5',
+                    'tests/data/fast5/tb2.fast5', 'tests/data/fast5/tb1.fast5']
+        self.assertCountEqual(result, expected)
+
+    def test_TBTestFast5DataBam_SixFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        reference = ['tests/data/bam/tb.bam']
+        args = TestArgs(fast5_dir, reference, True)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            bam2fast5.main(args)
+        stdout = f.getvalue()
+        result = [x for x in stdout.split('\n') if x]
+        expected = ['tests/data/fast5/tb5.fast5', 'tests/data/fast5/tb6.fast5',
+                    'tests/data/fast5/tb4.fast5', 'tests/data/fast5/tb3.fast5',
+                    'tests/data/fast5/tb2.fast5', 'tests/data/fast5/tb1.fast5']
+        self.assertCountEqual(result, expected)
+
+    def test_TBTestFast5DataSam_SixFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        reference = ['tests/data/sam/tb.sam']
+        args = TestArgs(fast5_dir, reference, True)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            bam2fast5.main(args)
+        stdout = f.getvalue()
+        result = [x for x in stdout.split('\n') if x]
+        expected = ['tests/data/fast5/tb5.fast5', 'tests/data/fast5/tb6.fast5',
+                    'tests/data/fast5/tb4.fast5', 'tests/data/fast5/tb3.fast5',
+                    'tests/data/fast5/tb2.fast5', 'tests/data/fast5/tb1.fast5']
+        self.assertCountEqual(result, expected)
+
+    def test_TBTestFast5DataSamAndFastq_SixFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        reference = ['tests/data/sam/tb.sam',
+                     'tests/data/fastq/tb_mapped.fastq.gz']
+        args = TestArgs(fast5_dir, reference, True)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            bam2fast5.main(args)
+        stdout = f.getvalue()
+        result = [x for x in stdout.split('\n') if x]
+        expected = ['tests/data/fast5/tb5.fast5', 'tests/data/fast5/tb6.fast5',
+                    'tests/data/fast5/tb4.fast5', 'tests/data/fast5/tb3.fast5',
+                    'tests/data/fast5/tb2.fast5', 'tests/data/fast5/tb1.fast5']
+        self.assertCountEqual(result, expected)
+
+    def test_EcoliTestFast5DataSam_TwoFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        reference = ['tests/data/sam/ecoli.sam']
+        args = TestArgs(fast5_dir, reference, True)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            bam2fast5.main(args)
+        stdout = f.getvalue()
+        result = [x for x in stdout.split('\n') if x]
+        expected = ['tests/data/fast5/ecoli1.fast5',
+                    'tests/data/fast5/ecoli2.fast5']
+        self.assertCountEqual(result, expected)
+
+    def test_TBTestFast5DataBamUnmapped_EightFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        reference = ['tests/data/bam/tb.bam']
+        args = TestArgs(fast5_dir, reference, False)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            bam2fast5.main(args)
+        stdout = f.getvalue()
+        result = [x for x in stdout.split('\n') if x]
+        expected = ['tests/data/fast5/ecoli1.fast5',
+                    'tests/data/fast5/ecoli2.fast5',
+                    'tests/data/fast5/tb5.fast5',
+                    'tests/data/fast5/tb6.fast5',
+                    'tests/data/fast5/tb4.fast5',
+                    'tests/data/fast5/tb3.fast5',
+                    'tests/data/fast5/tb2.fast5',
+                    'tests/data/fast5/tb1.fast5']
+        self.assertCountEqual(result, expected)
+
+    def test_TBTestFast5DataAlbacoreFastq_EightFilepaths(self):
+        fast5_dir = ['tests/data/fast5']
+        reference = ['tests/data/fastq/basecalled.fastq.gz']
+        args = TestArgs(fast5_dir, reference, False)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            bam2fast5.main(args)
+        stdout = f.getvalue()
+        result = [x for x in stdout.split('\n') if x]
+        expected = ['tests/data/fast5/ecoli1.fast5',
+                    'tests/data/fast5/ecoli2.fast5',
+                    'tests/data/fast5/tb5.fast5',
+                    'tests/data/fast5/tb6.fast5',
+                    'tests/data/fast5/tb4.fast5',
+                    'tests/data/fast5/tb3.fast5',
+                    'tests/data/fast5/tb2.fast5',
                     'tests/data/fast5/tb1.fast5']
         self.assertCountEqual(result, expected)
