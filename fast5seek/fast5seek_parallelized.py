@@ -9,7 +9,7 @@ Usage:
 
 It's pretty straight-forward to use:
 
-    ./bam2fast5 -i <fast5_dir> -r <in.fastq|in.bam|in.sam> -o <out.txt>
+    ./fast5seek -i <fast5_dir> -r <in.fastq|in.bam|in.sam> -o <out.txt>
 
 The script will walk down into subdirectories as well, so you can just give it your directory containing all your files.
 
@@ -512,7 +512,7 @@ def main():
         len(timestamp())*" "), file = sys.stderr)
     print("""{0}     This step will take the longest if you have used """.format(
         len(timestamp())*" "), file = sys.stderr)
-    print("""{0}     <bam2fast5> | xargs cp -t subset_dir/ to copy files.""".format(
+    print("""{0}     <fast5seek> | xargs cp -t subset_dir/ to copy files.""".format(
         len(timestamp())*" "), file = sys.stderr)
     for thisfile in sorted(final_filepath_set):
         print(thisfile, file=out_file)
@@ -527,8 +527,8 @@ def main():
 
 
 if __name__ == '__main__':
-    print("{0} - Starting bam2fast5.".format(
+    print("{0} - Starting fast5seek.".format(
         timestamp()), file=sys.stderr)
     main()
-    print("{0} - Done with bam2fast5. Bye.".format(
+    print("{0} - Done with fast5seek. Bye.".format(
         timestamp()), file=sys.stderr)

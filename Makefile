@@ -55,7 +55,7 @@ init: ## install pipenv
 	pipenv install --dev --skip-lock
 
 lint: ## check style with flake8
-	flake8 bam2fast5 tests
+	flake8 fast5seek tests
 
 test: ## run tests quickly with the default Python
 	pipenv run python -m unittest

@@ -2,7 +2,7 @@
 Outputs paths of all the fast5 files from a given directory that are contained within a fastq or BAM/SAM file.
 
 Please see the github page for more detailed instructions.
-https://github.com/mbhall88/bam2fast5/
+https://github.com/mbhall88/fast5seek/
 
 Contributors:
 Michael Hall (github@mbhall88)
@@ -12,7 +12,7 @@ import argparse
 import os
 import sys
 import logging
-from bam2fast5 import bam2fast5
+from fast5seek import fast5seek
 
 
 def setup_logging(level):
@@ -101,8 +101,8 @@ def cli():
     setup_logging(args.log_level)
     if args.output is not None:
         args.output = open(args.output, 'w')
-    logging.info(" Starting bam2fast5.")
-    bam2fast5.main(args)
+    logging.info(" Starting fast5seek.")
+    fast5seek.main(args)
     logging.info(" Done.")
 
 
