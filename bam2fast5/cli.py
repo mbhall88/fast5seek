@@ -64,7 +64,7 @@ def cli():
     parser.add_argument(
         "-r", "--reference",
         action=FullPathsList,
-        help="""Fastq or BAM/SAM file.""",
+        help="""Fastq or BAM/SAM file(s).""",
         nargs="+",
         required=True)
 
