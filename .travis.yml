@@ -1,0 +1,18 @@
+language: python
+python:
+  - "3.6"
+  - "3.5"
+# command to install dependencies
+install:
+  - make init
+  - make install
+# command to run tests
+script:
+  - make test
+
+notifications:
+  email:
+    recipients:
+      - mbhall88@gmail.com
+    on_success: never # default: change
+    on_failure: always # default: always
