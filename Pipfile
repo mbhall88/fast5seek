@@ -1,16 +1,12 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 pysam = "*"
 "e1839a8" = {path = ".", editable = true}
 "ont-fast5-api" = "*"
-
+"fast5seek" = {editable = true, path = "."}
 
 [dev-packages]
-

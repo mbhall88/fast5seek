@@ -20,6 +20,7 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
     description="Get paths for fast5 files contained in BAM, SAM, or fastq.",
     entry_points={
@@ -38,6 +39,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/mbhall88/fast5seek',
-    version='0.1.0',
+    version='0.1.1',
     zip_safe=False,
 )
