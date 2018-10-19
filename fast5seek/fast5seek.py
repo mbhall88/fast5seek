@@ -274,8 +274,9 @@ def update_progress(progress: float, write_progress_bar_to=sys.stdout):
         progress = 1
         status = "Done...\r\n"
     block = int(round(bar_length * progress))
+    progress_percent = round(progress * 100, 2)
     text = "\rPercent: [{0}] {1}% {2}".format(
-        "#" * block + "-" * (bar_length - block), progress * 100, status)
+        "#" * block + "-" * (bar_length - block), progress_percent, status)
     write_progress_bar_to.write(text)
     write_progress_bar_to.flush()
 
