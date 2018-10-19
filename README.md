@@ -2,7 +2,7 @@
 [![PyPI status](https://img.shields.io/pypi/v/fast5seek.svg)](https://pypi.python.org/pypi/fast5seek)
 [![Build Status](https://travis-ci.org/mbhall88/fast5seek.svg?branch=master)](https://travis-ci.org/mbhall88/fast5seek)
 [![GitHub license](https://img.shields.io/github/license/mbhall88/fast5seek.svg)](https://github.com/mbhall88/fast5seek/blob/master/LICENSE)
-![Twitter Follow](https://img.shields.io/twitter/follow/mbhall88.svg?style=social&logo=twitter&label=Follow)  
+[![Twitter Follow](https://img.shields.io/twitter/follow/mbhall88.svg?style=social&logo=twitter&label=Follow)](https://twitter.com/mbhall88)  
 
 This program takes a directory (or multiple) of fast5 files along with any number 
 of fastq, SAM, or BAM files. The output is the full paths for all fast5 files 
