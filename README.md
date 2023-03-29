@@ -1,3 +1,5 @@
+⚠️ **This project is effectively redundant now. The functionality can be reproduced with [`fast5_subset`](https://github.com/nanoporetech/ont_fast5_api#fast5_subset). See https://github.com/mbhall88/fast5seek/issues/7 for a further explanation.** ⚠️
+
 # fast5seek
 [![PyPI status](https://img.shields.io/pypi/v/fast5seek.svg)](https://pypi.python.org/pypi/fast5seek)
 [![Build Status](https://travis-ci.org/mbhall88/fast5seek.svg?branch=master)](https://travis-ci.org/mbhall88/fast5seek)
